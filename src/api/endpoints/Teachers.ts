@@ -1,0 +1,1 @@
+export const readData = '/Teachers/get/';

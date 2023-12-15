@@ -1,5 +1,6 @@
 from ortools.sat.python import cp_model
 import random
+from Schedule import Schedules
 
 class Scheduler:
     def __init__(self, rooms, students, teachers):
@@ -80,46 +81,6 @@ class Scheduler:
                             for specialized in t['specialized'] 
                             if c['code'] == specialized['code'] and r['type'] == c['type']) == 0)    
 
-    def continue_learning_and_teaching(self):
-        for s in self.students:
-            for c in s['courses']:
-                for d in self.days:
-                    for r in self.rooms:
-                        for t in self.teachers:
-                            for specialized in t['specialized']:
-                                if c['code'] == specialized['code'] and r['type'] == c['type']:
-                                    classes = [
-                                        self.model.NewBoolVar(f'X_{s["program"]}_{c["code"]}_{d}_{h}_{r["name"]}_{t["name"]}') for h in self.hours
-                                    ]
-                                    rest = [
-                                        self.model.NewBoolVar(f'R_{s["program"]}_{c["code"]}_{d}_{h}_{r["name"]}_{t["name"]}') for h in self.hours
-                                    ]
-
-                                    for h in self.hours:
-                                        # Ensure the index is within the range of classes and rest
-                                        if h < len(self.hours) - 1:
-                                            # Constraint: Either class or rest is scheduled at each hour
-                                            self.model.Add(self.X[s['program'], c['code'], d, h, r['name'], t['name']] == classes[h])
-
-                                    # Constraint: No more than 3 hours of continuous learning
-                                    self.model.Add(sum(classes) <= 3)
-
-                                    # Constraint: Less than or equal to 3 continuous rest after learning
-                                    self.model.Add(sum(rest) <= 3)
-
-                                    # Constraint: At least 1 hour of rest before continuing learning
-                                    for i in range(len(self.hours) - 1):  # Two iterations for two consecutive pairs of hours
-                                        self.model.Add(rest[i] + rest[i + 1] >= 1)
-
-                                    # Impose a relationship between X and classes, rest
-                                    for h in self.hours[:-1]:
-                                        self.model.Add(
-                                            self.X[s['program'], c['code'], d, h, r['name'], t['name']] == classes[h]
-                                        )
-                                        self.model.Add(
-                                            self.X[s['program'], c['code'], d, h, r['name'], t['name']] == rest[h]
-                                        )   
-
 class SolutionPrinter(cp_model.CpSolverSolutionCallback):
     def __init__(self, scheduler, limit):
         cp_model.CpSolverSolutionCallback.__init__(self)
@@ -147,7 +108,7 @@ if __name__ == "__main__":
     scheduler = Scheduler(rooms, students, teachers)
 
     # Create and set the solution callback with the desired limit
-    limit = 10  # Set the desired limit
+    limit = 1  # Set the desired limit
     solution_printer = SolutionPrinter(scheduler, limit)
     
     # Find solutions
@@ -155,3 +116,38 @@ if __name__ == "__main__":
 
     # Print the number of solutions found
     print(f'Number of solutions found: {solution_printer.solution_count}')
+
+    # Save the schedule data to MongoDB
+    schedule_data = {
+        'option1',
+        [
+            {
+                'BSCS',
+                '3', 
+                '2', 
+                'B', 
+                [
+                    {
+                        'course1',
+                        'course number 1',
+                        '3',
+                        'monday',
+                        '7am-8am', 
+                        'room1',
+                        'teacher1',
+                    },
+                    {
+                        'course2',
+                        'course number 2',
+                        '2',
+                        'tuesday',
+                        '7am-8am', 
+                        'room2',
+                        'teacher2',
+                    }
+                ]
+            },
+        ]
+    }
+    
+    Schedules.create(schedule_data)

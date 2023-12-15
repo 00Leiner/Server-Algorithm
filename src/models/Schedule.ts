@@ -19,9 +19,15 @@ export interface scheduleModel{
   year?: string;
   semester?: string;
   block?: string;
-  sched?: scheduleItemModel;
+  sched?: scheduleItemsModel;
 };
 
 export interface schedulesModel {
   schedule?: scheduleModel;
 }
+
+export interface OptionsScheduleModel{
+  _id?: string,
+  options?: string,
+  programs?: scheduleModel
+};

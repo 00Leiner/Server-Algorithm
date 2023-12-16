@@ -2,6 +2,20 @@ from ortools.sat.python import cp_model
 import random
 import requests
 
+class Fetching:
+    def __init__(self, data):
+        self.url = 'http://localhost:3000/Schedule/create'
+        self.data = data
+    
+    def perform_put_request(self):
+        response = requests.post(self.url, json=self.data)
+
+        if response.status_code == 200:
+            print('PUT request successful.')
+        else:
+            print(f"Error in PUT request. Status code: {response.status_code}")
+            print(response.text)
+
 class Scheduler:
     def __init__(self, rooms, students, teachers):
         #variable
@@ -91,7 +105,6 @@ class SolutionPrinter(cp_model.CpSolverSolutionCallback):
     def on_solution_callback(self):
 
         print(f'Solution {self.solution_count}:')
-        # Test
         for x, value in self.scheduler.X.items():
             if self.Value(value):
                 print(f'{x}')
@@ -102,50 +115,47 @@ class SolutionPrinter(cp_model.CpSolverSolutionCallback):
             self.StopSearch()
 
 if __name__ == "__main__":
-    # Load data from data.py
     from data import rooms, teachers, students
 
     scheduler = Scheduler(rooms, students, teachers)
-
-    # Create and set the solution callback with the desired limit
-    limit = 1  # Set the desired limit
+    
+    limit = 1  
     solution_printer = SolutionPrinter(scheduler, limit)
     
-    # Find solutions
     scheduler.solver.SearchForAllSolutions(scheduler.model, solution_printer)
 
-    # Print the number of solutions found
     print(f'Number of solutions found: {solution_printer.solution_count}')
 
-    # Save the schedule data to MongoDB
     schedule_data = {
-        'option1',
-        [
+        "options": "option1",
+        "programs": [
             {
-                'BSCS',
-                '3', 
-                '2', 
-                'B', 
-                [
+                "program": "BSCS",
+                "year": "3", 
+                "semester": "2", 
+                "block": "B", 
+                "sched": [
                     {
-                        'course1',
-                        'course number 1',
-                        '3',
-                        'monday',
-                        '7am-8am', 
-                        'room1',
-                        'teacher1',
+                        "courseCode": "course1",
+                        "courseDescription": "course number 1",
+                        "courseUnit": "3",
+                        "day": "monday",
+                        "time": "7am-8am", 
+                        "room": "room1",
+                        "instructor": "teacher1",
                     },
                     {
-                        'course2',
-                        'course number 2',
-                        '2',
-                        'tuesday',
-                        '7am-8am', 
-                        'room2',
-                        'teacher2',
+                        "courseCode": "course2",
+                        "courseDescription": "course number 2",
+                        "courseUnit": "2",
+                        "day": "tuesday",
+                        "time": "7am-8am", 
+                        "room": "room2",
+                        "instructor": "teacher2",
                     }
                 ]
             },
         ]
     }
+    #fetching_instance = Fetching(schedule_data)
+    #fetching_instance.perform_put_request()

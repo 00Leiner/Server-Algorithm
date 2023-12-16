@@ -1,6 +1,6 @@
 from ortools.sat.python import cp_model
 import random
-from Schedule import Schedules
+import requests
 
 class Scheduler:
     def __init__(self, rooms, students, teachers):
@@ -149,5 +149,3 @@ if __name__ == "__main__":
             },
         ]
     }
-    
-    Schedules.create(schedule_data)

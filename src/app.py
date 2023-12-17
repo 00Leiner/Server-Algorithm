@@ -6,12 +6,11 @@ from teacher import fetch_teacher_data
 from student import fetch_student_data
 from room import fetch_room_data
 
-
 app = Flask(__name__)
 
 class Fetching:
     def __init__(self):
-        self.url = 'http://localhost:3000/Schedule/create'
+        self.url = 'http://3.27.192.58:3000/Schedule/create'
 
     def perform_post_request(self, data):
         response = requests.post(self.url, json=data)

@@ -30,7 +30,7 @@ def format_data(fetched_data):
     return formatted_data
 
 def fetch_room_data():
-    fetch_url = 'http://localhost:3000/Rooms/get'
+    fetch_url = 'http://3.27.192.58:3000/Rooms/get'
     fetching_instance = Fetching(fetch_url)
     fetched_data = fetching_instance.perform_get_request()
 

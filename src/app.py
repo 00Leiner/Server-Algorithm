@@ -32,7 +32,7 @@ def activate_csp_algorithm():
 
         scheduler = Scheduler(rooms, students, teachers)
 
-        limit = 2
+        limit = 20
         solution_printer = SolutionPrinter(scheduler, limit)
 
         scheduler.solver.SearchForAllSolutions(scheduler.model, solution_printer)

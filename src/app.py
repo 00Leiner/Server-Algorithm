@@ -1,20 +1,53 @@
 from ortools.sat.python import cp_model
 import random
 import requests
+from flask import Flask, jsonify
+from teacher import fetch_teacher_data
+from student import fetch_student_data
+from room import fetch_room_data
 
+
+app = Flask(__name__)
 
 class Fetching:
     def __init__(self):
         self.url = 'http://localhost:3000/Schedule/create'
 
-    def perform_put_request(self, data):
+    def perform_post_request(self, data):
         response = requests.post(self.url, json=data)
 
-        if response.status_code == 200:
-            print('POST request successful.')
+        if response.status_code in [200, 201]:
+            return response
         else:
             print(f"Error in POST request. Status code: {response.status_code}")
             print(response.text)
+            return response
+
+@app.route('/activate_csp_algorithm', methods=['POST'])
+def activate_csp_algorithm():
+    try:
+        rooms = fetch_room_data()
+        students = fetch_student_data()
+        teachers = fetch_teacher_data()
+
+        scheduler = Scheduler(rooms, students, teachers)
+
+        limit = 2
+        solution_printer = SolutionPrinter(scheduler, limit)
+
+        scheduler.solver.SearchForAllSolutions(scheduler.model, solution_printer)
+
+        print(f'Number of solutions found: {solution_printer.solution_count}')
+
+        fetching_instance = Fetching()
+        for solution in solution_printer.solutions:
+            response = fetching_instance.perform_post_request(solution)
+            print(response.text)
+
+        return jsonify({"status": "success", "message": "CSP algorithm activated successfully"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)})
+
 
 class Scheduler:
     def __init__(self, rooms, students, teachers):
@@ -149,8 +182,8 @@ class SolutionPrinter(cp_model.CpSolverSolutionCallback):
                     "courseCode": courseCode,
                     "courseDescription": courseDescription,
                     "courseUnit": courseUnits,
-                    "day": day,
-                    "time": f"{time}am-{time + 1}am",  # Assuming the time is in hours
+                    "day": self.get_day_name(day),
+                    "time": f"{time}:00-{time + 1}:00",  
                     "room": room,
                     "instructor": instructor,
                 })
@@ -160,58 +193,19 @@ class SolutionPrinter(cp_model.CpSolverSolutionCallback):
 
         if self.solution_count >= self.limit:
             self.StopSearch()
-
+        
+    def get_day_name(self, day):  # Include self as the first parameter
+        days_of_week = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+        
+        # Ensure that the day value is a string representing a number
+        try:
+            day_number = int(day)
+            if 1 <= day_number <= 7:
+                return days_of_week[day_number - 1]
+            else:
+                return "Invalid Day"
+        except ValueError:
+            return "Invalid Day"
 
 if __name__ == "__main__":
-    from data import rooms, teachers, students
-
-    scheduler = Scheduler(rooms, students, teachers)
-
-    limit = 10
-    solution_printer = SolutionPrinter(scheduler, limit)
-
-    scheduler.solver.SearchForAllSolutions(scheduler.model, solution_printer)
-
-    print(f'Number of solutions found: {solution_printer.solution_count}')
-
-    
-
-    fetching_instance = Fetching()
-    for solution in solution_printer.solutions:
-        fetching_instance.perform_put_request(solution)
-
-'''
-    schedule_data = {
-        "options": "option1",
-        "programs": [
-            {
-                "program": "BSCS",
-                "year": "3", 
-                "semester": "2", 
-                "block": "B", 
-                "sched": [
-                    {
-                        "courseCode": "course1",
-                        "courseDescription": "course number 1",
-                        "courseUnit": "3",
-                        "day": "monday",
-                        "time": "7am-8am", 
-                        "room": "room1",
-                        "instructor": "teacher1",
-                    },
-                    {
-                        "courseCode": "course2",
-                        "courseDescription": "course number 2",
-                        "courseUnit": "2",
-                        "day": "tuesday",
-                        "time": "7am-8am", 
-                        "room": "room2",
-                        "instructor": "teacher2",
-                    }
-                ]
-            },
-        ]
-    }
-    fetching_instance = Fetching(schedule_data)
-    fetching_instance.perform_put_request()
-'''
+    app.run(debug=True)

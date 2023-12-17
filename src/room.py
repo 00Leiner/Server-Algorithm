@@ -29,15 +29,14 @@ def format_data(fetched_data):
 
     return formatted_data
 
-if __name__ == "__main__":
+def fetch_room_data():
     fetch_url = 'http://localhost:3000/Rooms/get'
     fetching_instance = Fetching(fetch_url)
     fetched_data = fetching_instance.perform_get_request()
 
     if fetched_data is not None:
-        # Process the formatted data
         formatted_data = format_data(fetched_data)
-        print('Formatted data:')
-        print(formatted_data)
+        return formatted_data
     else:
         print('Failed to fetch data.')
+        return None

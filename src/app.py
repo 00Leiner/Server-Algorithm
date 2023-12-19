@@ -54,7 +54,7 @@ class Scheduler:
         self.rooms = rooms
         self.students = students
         self.teachers = teachers
-        self.days = range(0, 6)
+        self.days = range(1, 6)
         self.hours = range(7, 20)
         # Initialize the CP-SAT model
         self.model = cp_model.CpModel()
@@ -86,10 +86,13 @@ class Scheduler:
                             for t in self.teachers:
                                 instructor = t['name']
                                 for specialized in t['specialized']:
-                                    if courseCode == specialized['code'] and r['type'] == courseType:
-                                         self.X[program, year, block, semester, courseCode, courseDescription, courseUnits, d, h, room, instructor] = \
+                                    if courseCode == specialized['code']:
+                                        self.X[program, year, block, semester, courseCode, courseDescription, courseUnits, d, h, room, instructor] = \
                                             self.model.NewBoolVar(f'X_{program}_{year}_{block}_{semester}_{courseCode}_{courseDescription}_{courseUnits}_{d}_{h}_{room}_{instructor}')
-    
+                                    else:
+                                        self.X[program, year, block, semester, courseCode, courseDescription, courseUnits, d, h, room, instructor] = \
+                                            self.model.NewBoolVar(f'X_{program}_{year}_{block}_{semester}_{courseCode}_{courseDescription}_{courseUnits}_{d}_{h}_{room}_{instructor}')
+
     def unit_constraints(self):
         for s in self.students:
             program = s['program']
@@ -100,18 +103,40 @@ class Scheduler:
                 courseCode = c['code']
                 courseDescription = c['description']
                 courseUnits = c['units']
-                courseType = c['type']
-                units = int(c['units'])
 
-                self.model.Add(sum(self.X[program, year, block, semester, courseCode, courseDescription, courseUnits, d, h, r['name'], t['name']] 
-                                   for d in self.days 
-                                   for h in self.hours 
-                                   for r in self.rooms 
-                                   for t in self.teachers 
-                                   for specialized in t['specialized'] 
-                                   if c['code'] == specialized['code'] and r['type'] == courseType
-                                   ) == units)
-
+                if c['type'] == 'Laboratory':
+                    labunits = 3
+                    self.model.Add(sum(self.X[program, year, block, semester, courseCode, courseDescription, courseUnits, d, h, r['name'], t['name']] 
+                                    for d in self.days 
+                                    for h in self.hours 
+                                    for r in self.rooms 
+                                    if r['type'] == 'Laboratory'
+                                    for t in self.teachers 
+                                    for specialized in t['specialized']
+                                    if courseCode == specialized['code']
+                                    ) == labunits)
+                    lecunits = 2
+                    self.model.Add(sum(self.X[program, year, block, semester, courseCode, courseDescription, courseUnits, d, h, r['name'], t['name']] 
+                                    for d in self.days 
+                                    for h in self.hours 
+                                    for r in self.rooms 
+                                    if r['type'] == 'Lecture'
+                                    for t in self.teachers 
+                                    for specialized in t['specialized']
+                                    if courseCode == specialized['code']
+                                    ) == lecunits)
+                else:
+                    lecunits = 3
+                    self.model.Add(sum(self.X[program, year, block, semester, courseCode, courseDescription, courseUnits, d, h, r['name'], t['name']] 
+                                    for d in self.days 
+                                    for h in self.hours 
+                                    for r in self.rooms 
+                                    if r['type'] == 'Lecture'
+                                    for t in self.teachers 
+                                    for specialized in t['specialized']
+                                    if courseCode == specialized['code']
+                                    ) == lecunits)
+    
     def no_double_booking_rooms_availability(self):
         for d in self.days:
             for h in self.hours:
@@ -120,8 +145,8 @@ class Scheduler:
                                         for s in self.students 
                                         for c in s['courses'] 
                                         for t in self.teachers 
-                                        for specialized in t['specialized'] 
-                                        if c['code'] == specialized['code'] and r['type'] == c['type']
+                                        for specialized in t['specialized']
+                                        if c['code'] == specialized['code']
                                         ]
                     self.model.Add(sum(room_constraints) <= 1)
 
@@ -135,7 +160,7 @@ class Scheduler:
                                for r in self.rooms
                                for t in self.teachers
                                for specialized in t['specialized'] 
-                               if c['code'] == specialized['code'] and r['type'] == c['type']) == 0)
+                               if c['code'] == specialized['code']) == 0)
             
         # 1 day rest of teaching schedule
         for t in self.teachers:
@@ -146,7 +171,8 @@ class Scheduler:
                                for h in self.hours
                                for r in self.rooms
                                for specialized in t['specialized'] 
-                               if c['code'] == specialized['code'] and r['type'] == c['type']) == 0)    
+                               if c['code'] == specialized['code']) == 0)    
+     
 
 class SolutionPrinter(cp_model.CpSolverSolutionCallback):
     def __init__(self, scheduler, limit):
@@ -194,12 +220,12 @@ class SolutionPrinter(cp_model.CpSolverSolutionCallback):
             self.StopSearch()
         
     def get_day_name(self, day):  # Include self as the first parameter
-        days_of_week = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+        days_of_week = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
         
         # Ensure that the day value is a string representing a number
         try:
             day_number = int(day)
-            if 1 <= day_number <= 7:
+            if 1 <= day_number <= 6:
                 return days_of_week[day_number - 1]
             else:
                 return "Invalid Day"

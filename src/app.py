@@ -2,9 +2,9 @@ from ortools.sat.python import cp_model
 import random
 import requests
 from flask import Flask, jsonify
-from teacher import fetch_teacher_data
-from student import fetch_student_data
-from room import fetch_room_data
+from src.teacher import fetch_teacher_data
+from src.student import fetch_student_data
+from src.room import fetch_room_data
 
 app = Flask(__name__)
 
@@ -31,7 +31,7 @@ def activate_csp_algorithm():
 
         scheduler = Scheduler(rooms, students, teachers)
 
-        limit = 20
+        limit = 2
         solution_printer = SolutionPrinter(scheduler, limit)
 
         scheduler.solver.SearchForAllSolutions(scheduler.model, solution_printer)
@@ -207,4 +207,5 @@ class SolutionPrinter(cp_model.CpSolverSolutionCallback):
             return "Invalid Day"
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    from waitress import serve
+    serve(app, host="0.0.0.0", port=8080)

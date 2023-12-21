@@ -85,14 +85,9 @@ class Scheduler:
                             room = r['name']
                             for t in self.teachers:
                                 instructor = t['name']
-                                for specialized in t['specialized']:
-                                    if courseCode == specialized['code']:
-                                        self.X[program, year, block, semester, courseCode, courseDescription, courseUnits, d, h, room, instructor] = \
-                                            self.model.NewBoolVar(f'X_{program}_{year}_{block}_{semester}_{courseCode}_{courseDescription}_{courseUnits}_{d}_{h}_{room}_{instructor}')
-                                    else:
-                                        self.X[program, year, block, semester, courseCode, courseDescription, courseUnits, d, h, room, instructor] = \
-                                            self.model.NewBoolVar(f'X_{program}_{year}_{block}_{semester}_{courseCode}_{courseDescription}_{courseUnits}_{d}_{h}_{room}_{instructor}')
-
+                                self.X[program, year, block, semester, courseCode, courseDescription, courseUnits, d, h, room, instructor] = \
+                                    self.model.NewBoolVar(f'X_{program}_{year}_{block}_{semester}_{courseCode}_{courseDescription}_{courseUnits}_{d}_{h}_{room}_{instructor}')
+                                   
     def unit_constraints(self):
         for s in self.students:
             program = s['program']
@@ -104,26 +99,22 @@ class Scheduler:
                 courseDescription = c['description']
                 courseUnits = c['units']
 
-                if c['type'] == 'Laboratory':
+                if c['type'] == 'laboratory':
                     labunits = 3
                     self.model.Add(sum(self.X[program, year, block, semester, courseCode, courseDescription, courseUnits, d, h, r['name'], t['name']] 
                                     for d in self.days 
                                     for h in self.hours 
                                     for r in self.rooms 
-                                    if r['type'] == 'Laboratory'
+                                    if r['type'] == 'laboratory'
                                     for t in self.teachers 
-                                    for specialized in t['specialized']
-                                    if courseCode == specialized['code']
                                     ) == labunits)
                     lecunits = 2
                     self.model.Add(sum(self.X[program, year, block, semester, courseCode, courseDescription, courseUnits, d, h, r['name'], t['name']] 
                                     for d in self.days 
                                     for h in self.hours 
                                     for r in self.rooms 
-                                    if r['type'] == 'Lecture'
+                                    if r['type'] == 'lecture'
                                     for t in self.teachers 
-                                    for specialized in t['specialized']
-                                    if courseCode == specialized['code']
                                     ) == lecunits)
                 else:
                     lecunits = 3
@@ -131,10 +122,8 @@ class Scheduler:
                                     for d in self.days 
                                     for h in self.hours 
                                     for r in self.rooms 
-                                    if r['type'] == 'Lecture'
+                                    if r['type'] == 'lecture'
                                     for t in self.teachers 
-                                    for specialized in t['specialized']
-                                    if courseCode == specialized['code']
                                     ) == lecunits)
     
     def no_double_booking_rooms_availability(self):
@@ -145,8 +134,6 @@ class Scheduler:
                                         for s in self.students 
                                         for c in s['courses'] 
                                         for t in self.teachers 
-                                        for specialized in t['specialized']
-                                        if c['code'] == specialized['code']
                                         ]
                     self.model.Add(sum(room_constraints) <= 1)
 
@@ -158,9 +145,7 @@ class Scheduler:
                                for c in s['courses']
                                for h in self.hours
                                for r in self.rooms
-                               for t in self.teachers
-                               for specialized in t['specialized'] 
-                               if c['code'] == specialized['code']) == 0)
+                               for t in self.teachers) == 0)
             
         # 1 day rest of teaching schedule
         for t in self.teachers:
@@ -169,9 +154,29 @@ class Scheduler:
                                for s in self.students
                                for c in s['courses']
                                for h in self.hours
-                               for r in self.rooms
-                               for specialized in t['specialized'] 
-                               if c['code'] == specialized['code']) == 0)    
+                               for r in self.rooms) == 0)   
+
+    def teacher_o_student_assignment(self):
+         for s in self.students:
+            program = s['program']
+            year = s['year']
+            semester = s['semester']
+            block = s['block']
+            for c in s['courses']:
+                courseCode = c['code']
+                courseDescription = c['description']
+                courseUnits = c['units']
+                courseType = c['type']
+                for d in self.days:
+                    for h in self.hours:
+                        for r in self.rooms:
+                            room = r['name']
+                            room_constraints = [self.X[program, year, block, semester, courseCode, courseDescription, courseUnits, d, h, room, t['name']] 
+                                        for t in self.teachers
+                                        for specialized in t['specialized']
+                                        if courseCode == specialized['code'] and courseDescription == specialized['description']
+                                        ]
+                            self.model.Add(sum(room_constraints) <= 1)
      
 
 class SolutionPrinter(cp_model.CpSolverSolutionCallback):
